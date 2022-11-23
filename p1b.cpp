@@ -4,19 +4,29 @@
 #include <pthread.h>
 #include <string>
 #include <iostream>
+#include <vector>
 
-#define n 2000
+#define n 16
+
+///Global vars/// - shared memory
+
+char mainGrid[n][n]; //Full game grid
+int mine_count = 40;
+int flag_count = 0;
+long unsigned int p; //num of threads
 
 //Struct used to pass arguements to threads
-struct thread_data{//Holds indexes of the threads
+struct thread_data{//Holds indexes of the threads (where the subgrid start)
 	int i_indx;
 	int j_indx;
-	//pthread_mutex_t * mutexp;//Pointer to the mutex for the thread
+
+	//Pointers to flag array and click array(?)
+
+
 };
 
 //Global variables (shared memory)
-long unsigned int p; 
-double **A, **B, **C;
+//double **A, **B, **C;
 pthread_mutex_t* mutexes;
 
 //Threaded function
@@ -51,33 +61,23 @@ int main(int argc, char *argv[]){
 	
 	p = atoi(argv[1]);//p^2 = number of threads
 	
-	A = (double**) malloc (sizeof(double*)*n);
-	B = (double**) malloc (sizeof(double*)*n);
-	C = (double**) malloc (sizeof(double*)*n);	
-
-	for (i=0; i<n; i++) {
-		A[i] = (double*) malloc(sizeof(double)*n);
-		B[i] = (double*) malloc(sizeof(double)*n);
-		C[i] = (double*) malloc(sizeof(double)*n);
-	}
+	//Create a subgrid for each thread to process	
+	int sub_grid_dim = n/p;//one dimmension of the subgrids (which are all of equal size)
+	//^^^ use this value to determine the cells that a subgrid is in charge of evaluating by
+	//having the cell iterate from its index to its index + this value in the x and y directions
 	
-	for (i=0; i<n; i++){
-		for(j=0; j< n; j++){
-			A[i][j]=i;
-			B[i][j]=i+j;
-			C[i][j]=0;
-		}
-	}
+	int thread_grid_dim = p/2;//one dimmension of threads in the grid (e.g. 4 threads = 2 by two grid of threads)
 
-	struct thread_data thread_data_array[p*p];//Each thread has specific data
-	pthread_t threads[p*p];//Opaque, unique IDs (?)
+	//Create 2 2D arrays that are dynamic in one dimmension. These arrays will hold the cells to be flagged
+	// and cells to be clicked indicated by specific threads
+	std::vector<std::pair> flag_array[thread_grid_dim][thread_grid_dim];//A 2 d array of vectors of pairs (indeces of cells)
+	std::vector<std::pair> click_array[thread_grid_dim][thread_grid_dim];
+
+	//QUESTION: How can we send these arrays to each thread in a way that allows all alterations to persist?
+
+	struct thread_data thread_data_array[p];//Each thread has specific data
+	pthread_t threads[p];//Opaque, unique IDs
 	pthread_attr_t attr;//Create pthread attribute obj
-
-	//Allocate memeory to hold mutex
-	mutexes = (pthread_mutex_t*) malloc (sizeof(pthread_mutex_t)*n);//p mutexes, for each row of array blocks
-
-	//Initialize mutexes
-	for (i=0;i<n;i++) pthread_mutex_init(&mutexes[i],NULL);
 
 	//Init attribute and set the detached status
 	pthread_attr_init(&attr);
@@ -85,23 +85,19 @@ int main(int argc, char *argv[]){
 
 	int rc; //a indexes the thread_data_array
 	int a =  0;
-	int ndp = n/p;
 			
 	if( clock_gettime(CLOCK_REALTIME, &start) == -1) { perror("clock gettime");}
 	
-	//Have indexes increment by the size of the blocks
-	for (i=0; i<n; i+= ndp){
-		for (j=0; j<n; j+= ndp){
+	//Have indexes increment by the size of the sub grids
+	for (i=0; i<n; i+= sub_grid_dim){//Row major traversal
+		for (j=0; j<n; j+= sub_grid_dim){
 
-			//Set the index values of each thread to match that of the indexes during its instantion
+			//Subgrid (thread) indexes
 			thread_data_array[a].i_indx = i;
 			thread_data_array[a].j_indx = j;
 
-			// if(i == 0){
-			// 	thread_data_array[a].mutexp = &mutexes[0];
-			// }else{
-			// 	thread_data_array[a].mutexp = &mutexes[ndp/i];
-			// }
+			//Provide pointers to the arrays
+			//Each thread gets the same pointers
 			
 			rc = pthread_create(&threads[a], &attr, multiplyBlock, (void *) &thread_data_array[a] );
 			if (rc) { printf("ERROR; return code from pthread_create() is %d\n", rc); exit(-1);}
@@ -126,8 +122,7 @@ int main(int argc, char *argv[]){
 	time = (stop.tv_sec - start.tv_sec)+ (double)(stop.tv_nsec - start.tv_nsec)/1e9;
 
 	printf("Number of FLOPs = %lu, Execution time = %f sec,\n%lf MFLOPs per sec\n", 2*n*n*n, time, 1/time/1e6*2*n*n*n);		
-	printf("C[100][100]=%f\n", C[100][100]);
-
+	
 	// release memory
 	for (i=0; i<n; i++) {
 		free(A[i]);
