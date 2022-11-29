@@ -39,23 +39,48 @@ The boss thread will go through all these vectors and determine what to click an
 */
 
 //Threaded function
-void *multiplyBlock(void* threadArg){
+void *threadBlock(void* threadArg){
 	struct thread_data * my_data;//Create pointer of type thread_data to reference thread data
 	//from array that was passed into function
 
 	my_data = (struct thread_data *) threadArg;//Contains the i and j indexes to start at
+	
+	//thread 0 pictures
+	if (my_data.i_index == 0 && my_data.j_index ==0){
+		// initial click
+		// take photo
+		// load cells into shared memory
+	}
+	
+	
+	// Barrier 1
+	pthread_barrier_wait(&barrier1);
+	
+	while(flags_count != mine_count){
 
-	//Start at indexes specified for block associated with the thread
-	for(int i = my_data->i_indx; i < my_data->i_indx+(n/p); i++){
-		for(int j = my_data->j_indx; j < my_data->j_indx + (n/p); j++){
-			for(int k = 0; k < n; k++){
-				//pthread_mutex_lock(my_data->mutexp);//Acquire lock to alter C[i][k]
-				pthread_mutex_lock(&mutexes[i]);//Acquire lock to alter C[i][k]
-				C[i][k] = C[i][k] + A[i][j]*B[j][k];
-				pthread_mutex_lock(&mutexes[i]);//Acquire lock to alter C[i][k]
-				//pthread_mutex_unlock(my_data->mutexp);//Release lock
+		//Start at indexes specified for block associated with the thread
+		for(int i = my_data->i_indx; i < my_data->i_indx+(n/p); i++){
+			for(int j = my_data->j_indx; j < my_data->j_indx + (n/p); j++){
+				for(int k = 0; k < n; k++){
+					// DPSP
+					// End game tactics
+					// Write to buffers
+				}
 			}
 		}
+		
+		// Barrier 2 
+		pthread_barrier_wait(&barrier2);
+		
+		if (my_data.i_index == 0 && my_data.j_index ==0){
+			// click board
+			// take photo
+			// load cells into shared memory
+			// check for exit condition
+		}
+		
+		// Barrier 3	
+		pthread_barrier_wait(&barrier3);	
 	}
 
 	pthread_exit((void*) threadArg); //Terminate thread
@@ -81,9 +106,24 @@ int main(int argc, char *argv[]){
 	pthread_t threads[p];//Opaque, unique IDs
 	pthread_attr_t attr;//Create pthread attribute obj
 
+	//Create barriers
+	pthread_barrier_t barrier1; 
+	pthread_barrierattr_t attr;
+	pthread_barrier_init(&barrier1, &attr, num_threads);
+	
+	pthread_barrier_t barrier2; 
+	pthread_barrierattr_t attr;
+	pthread_barrier_init(&barrier2, &attr, num_threads);
+	
+	pthread_barrier_t barrier3; 
+	pthread_barrierattr_t attr;
+	pthread_barrier_init(&barrier3, &attr, num_threads)
+
 	//Init attribute and set the detached status
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+	
+	
 
 	int rc;
 	int a =  0;//a indexes the thread_data_array which will store thread indexes in row major
