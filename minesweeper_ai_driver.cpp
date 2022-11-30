@@ -166,6 +166,132 @@ void AFN(int row, int col, int threadID){
 
 void AMN(int row, int col){
 
+	int unrevealed_neighbors = 0;
+
+	std::vector<std::pair> cell_vec;
+	
+
+	if( row*col == 0 || row*col == 15*15){//Count the number of flagged neighbors
+
+		if(row == 0 && col == 0){//Top left
+
+			for(int i = row; i < row+2; i++){
+				for(int j = col; j < col+2; j++){
+					if(mainGrid[row][col] == 'U'){
+						unrevealed_neighbors++;						
+					}else if((mainGrid[row][col] == 'F') || (mainGrid[row][col] == 'S')){
+						cell_vec.push_back(std::pair(row,col)); // what is this for
+					}
+				}
+			}
+
+		}else if(row == 0 && col == 15){//Top right
+
+			for(int i = row ; i < row+2; i++){
+				for(int j = col-1; j < n ; j++){
+					if(mainGrid[row][col] == 'U'){
+						unrevealed_neighbors++;						
+					}else if((mainGrid[row][col] == 'F') || (mainGrid[row][col] == 'S')){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+
+		}else if(row == 15 && col == 0){//Bottom left
+
+			for(int i = row-1 ; i < n; i++){
+				for(int j = col; j < col+2; j++){
+					if(mainGrid[row][col] == 'U'){
+						unrevealed_neighbors++;						
+					}else if((mainGrid[row][col] == 'F') || (mainGrid[row][col] == 'S')){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+	
+		}else if(row == 15 && col == 15){//Bottom right
+
+			for(int i = row-1 ; i < n; i++){
+				for(int j = col-1; j < n ; j++){
+					if(mainGrid[row][col] == 'U'){
+						unrevealed_neighbors++;						
+					}else if((mainGrid[row][col] == 'F') || (mainGrid[row][col] == 'S')){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+
+		}else if(row == 0){//Top edge
+
+			for(int i = row; i < row+2; i++){
+				for(int j = col-1; j < col+2; j++){
+					if(mainGrid[row][col] == 'U'){
+						unrevealed_neighbors++;						
+					}else if((mainGrid[row][col] == 'F') || (mainGrid[row][col] == 'S')){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+
+		}else if(row == 15){//Bottom edge
+
+			for(int i = row-1 ; i < n; i++){
+				for(int j = col-1; j < col+2; j++){
+					if(mainGrid[row][col] == 'U'){
+						unrevealed_neighbors++;						
+					}else if((mainGrid[row][col] == 'F') || (mainGrid[row][col] == 'S')){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+
+		}else if(col == 0){//Left edge
+
+			for(int i = row-1 ; i < row+2; i++){
+				for(int j = col; j < col+2; j++){
+					if(mainGrid[row][col] == 'U'){
+						unrevealed_neighbors++;						
+					}else if((mainGrid[row][col] == 'F') || (mainGrid[row][col] == 'S')){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+
+		}else if(col == 15){//Right edge
+
+			for(int i = row-1 ; i < row+2; i++){
+				for(int j = col-1; j < n ; j++){
+					if(mainGrid[row][col] == 'U'){
+						unrevealed_neighbors++;						
+					}else if((mainGrid[row][col] == 'F') || (mainGrid[row][col] == 'S')){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+
+		}
+
+	}else{//Middle cell
+
+		for(int i = row-1 ; i < row+2; i++){
+				for(int j = col-1; j < col+2 ; j++){
+					if(mainGrid[row][col] == 'F'){
+						flagged_neighbors++;						
+					}else if((mainGrid[row][col] == 'F') || (mainGrid[row][col] == 'S')){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+
+	}
+
+	//compare unrevealed_neighbors and number on cell
+	if( (char)unrevealed_neighbors /*Cast to char*/ == mainGrid[row][col] ){
+		//Add all surrounding cells to click vec
+		for(auto& x : cell_vec){
+			flag_vec[threadID].push_back(x);//Add pair of indexes to click_vec for its subgrid/thread
+
+	}
 
 
 }
