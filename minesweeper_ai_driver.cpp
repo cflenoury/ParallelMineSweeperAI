@@ -24,10 +24,151 @@ std::vector<std::vector<std::pair>> flag_vec;
 std::vector<std::vector<std::pair>> click_vec;
 
 //Struct used to pass arguements to threads
-struct thread_data{//Holds indexes of the threads (where the subgrid start)
+struct thread_data{//Holds indexes of the cell in the top left corner of a thread's subgrid
 	int i_indx;
 	int j_indx;
 };
+
+
+//Double Set Single Point Functions
+void AFN(int row, int col, int threadID){
+
+	int flagged_neighbors = 0;
+
+	std::vector<std::pair> cell_vec;
+	
+
+	if( row*col == 0 || row*col == 15*15){//Count the number of flagged neighbors
+
+		if(row == 0 && col == 0){//Top left
+
+			for(int i = row; i < row+2; i++){
+				for(int j = col; j < col+2; j++){
+					if(mainGrid[row][col] == 'F'){
+						flagged_neighbors++;						
+					}else if(mainGrid[row][col] == 'U'){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+
+		}else if(row == 0 && col == 15){//Top right
+
+			for(int i = row ; i < row+2; i++){
+				for(int j = col-1; j < n ; j++){
+					if(mainGrid[row][col] == 'F'){
+						flagged_neighbors++;						
+					}else if(mainGrid[row][col] == 'U'){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+
+		}else if(row == 15 && col == 0){//Bottom left
+
+			for(int i = row-1 ; i < n; i++){
+				for(int j = col; j < col+2; j++){
+					if(mainGrid[row][col] == 'F'){
+						flagged_neighbors++;						
+					}else if(mainGrid[row][col] == 'U'){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+	
+		}else if(row == 15 && col == 15){//Bottom right
+
+			for(int i = row-1 ; i < n; i++){
+				for(int j = col-1; j < n ; j++){
+					if(mainGrid[row][col] == 'F'){
+						flagged_neighbors++;						
+					}else if(mainGrid[row][col] == 'U'){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+
+		}else if(row == 0){//Top edge
+
+			for(int i = row; i < row+2; i++){
+				for(int j = col-1; j < col+2; j++){
+					if(mainGrid[row][col] == 'F'){
+						flagged_neighbors++;						
+					}else if(mainGrid[row][col] == 'U'){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+
+		}else if(row == 15){//Bottom edge
+
+			for(int i = row-1 ; i < n; i++){
+				for(int j = col-1; j < col+2; j++){
+					if(mainGrid[row][col] == 'F'){
+						flagged_neighbors++;						
+					}else if(mainGrid[row][col] == 'U'){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+
+		}else if(col == 0){//Left edge
+
+			for(int i = row-1 ; i < row+2; i++){
+				for(int j = col; j < col+2; j++){
+					if(mainGrid[row][col] == 'F'){
+						flagged_neighbors++;						
+					}else if(mainGrid[row][col] == 'U'){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+
+		}else if(col == 15){//Right edge
+
+			for(int i = row-1 ; i < row+2; i++){
+				for(int j = col-1; j < n ; j++){
+					if(mainGrid[row][col] == 'F'){
+						flagged_neighbors++;						
+					}else if(mainGrid[row][col] == 'U'){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+
+		}
+
+	}else{//Middle cell
+
+		for(int i = row-1 ; i < row+2; i++){
+				for(int j = col-1; j < col+2 ; j++){
+					if(mainGrid[row][col] == 'F'){
+						flagged_neighbors++;						
+					}else if(mainGrid[row][col] == 'U'){
+						cell_vec.push_back(std::pair(row,col));
+					}
+				}
+			}
+
+	}
+
+	//compare flagged _neighbors and number on cell
+	if( (char)flagged_neighbors /*Cast to char*/ == mainGrid[row][col] ){
+		//Add all surrounding cells to click vec
+		for(auto& x : cell_vec){
+			click_vec[threadID].push_back(x);//Add pair of indexes to click_vec for its subgrid/thread
+			mainGrid[x.first][x.last] = 'S';//Change the cell's to be clicked to have an 'S' on them to indicate that they are safe to click (useful for AMN)
+		}
+
+	}
+
+}
+
+void AMN(int row, int col){
+
+
+
+}
 
 /*
 Use thread ID to access the vector for that thread to add its actionable cells to.
@@ -61,11 +202,17 @@ void *threadBlock(void* threadArg){
 		//Start at indexes specified for block associated with the thread
 		for(int i = my_data->i_indx; i < my_data->i_indx+(n/p); i++){
 			for(int j = my_data->j_indx; j < my_data->j_indx + (n/p); j++){
-				for(int k = 0; k < n; k++){
-					// DPSP
+					// DPSP functions
+
+					//if cell is unrevealed
+						//Call AFN
+						//Then call AMN
+
+					//~~~~~~~~~~~
+
+					// CSCSP
 					// End game tactics
 					// Write to buffers
-				}
 			}
 		}
 		
@@ -140,8 +287,8 @@ int main(int argc, char *argv[]){
 
 			//Add a vector to hold the indexes; add a new vector for each subgrid/thread
 			std::vector<std::pair> vop;
-			flag_block.push_back(vop);
-			click_block.push_back(vop);
+			flag_vec.push_back(vop);
+			click_vec.push_back(vop);
 			
 			rc = pthread_create(&threads[a], &attr, multiplyBlock, (void *) &thread_data_array[a] );
 			if (rc) { printf("ERROR; return code from pthread_create() is %d\n", rc); exit(-1);}
