@@ -22,13 +22,19 @@ int mine_count = 40;//Number of mines in intermediate game
 int flag_count = 0;//Number of flags in intermediate board
 long unsigned int p; //num of threads
 bool win_cond = false;
+bool lose_cond = false;
 
 //Create barriers
+// pthread_barrier_t barrier1; 
+// pthread_barrier_t barrier2; 
+// pthread_barrier_t barrier3;
+// pthread_barrier_t barrier4;
+// pthread_barrier_t barrier5;
+// pthread_barrier_t barrier6;
+
 pthread_barrier_t barrier1; 
-pthread_barrier_t barrier2; 
-pthread_barrier_t barrier3;
-pthread_barrier_t barrier4;
-pthread_barrier_t barrier5;
+pthread_barrierattr_t attr1;
+
 
 //These are 2 3D vectors that will hold the indexes of cells to be flagged
 //and cells to be clicked. The first 2 dimensions of the vectors will be
@@ -306,24 +312,36 @@ void AMN(int row, int col, int threadID){
 
 bool click_cells(int threadID){
 
-	for(auto& x: click_vec[threadID]){
+	for(auto x = click_vec[threadID].begin(); it != click_vec[threadID].begin()){
 		int row = x.first;
 		int col = x.second;
 
+		cout << "x.first " << x.first << " and x.second " << x.second << endl;
+
 		if(solutionGrid[row][col] == 9){//mine
 			cout << "Game over!\n";
+
+			lose_cond = false;
 			
 			return false;
 
 		}else if(solutionGrid[row][col] == 0){//Empty cell
 
-			for(int i = --row; i<row + 2; ++i){
-				for(int j  = -- col; j < col + 2; ++j){
-					if((j >= 0) && (i >= 0)){
-						mainGrid[row][col] = solutionGrid[row][col];
+			for(int i = row-1; i<row + 2; i++){
+				for(int j  = col-1; j < col + 2; j++){
+					if( (j == col) && (i == row)){
+
+						mainGrid[i][j] = solutionGrid[i][j];
+
+
+					}else if(i*j >= 0){
+						click_vec[threadID].push_back(pair<int,int>(i,j));
+						
 					}
 				}
 			}
+
+			click_cells(threadID);
 
 		}else{//Reveal cell
 			mainGrid[row][col] = solutionGrid[row][col];
@@ -337,13 +355,12 @@ bool click_cells(int threadID){
 
 void flag_cells(int threadID){
 
-	for(auto& x: click_vec[threadID]){
+	for(auto& x: flag_vec[threadID]){
 		int row = x.first;
 		int col = x.second;		
 		
 		mainGrid[row][col] = -2;//Inidicate cell has a mine under it
 		flag_count++;
-
 	}
 }
 
@@ -376,24 +393,34 @@ void *threadBlock(void* threadArg){
 	int col = my_data->j_indx;
 	
 	//thread 0 pictures
-	if ( row == 0 && col == 0){
+	if (threadID == 0){
+		cout << "Making first move\n";
 		//Random move
 		int a = rand()%16;
 		int b = rand()%16;
-		pair<int,int> p(row, col);
+
+		pair<int,int> p(a, b);
 		click_vec[threadID].push_back(p);
 
+		cout << "Clicking cell " << click_vec[threadID][0].first << ","<< click_vec[threadID][0].second << endl;
+
 		// initial click
-		if(!click_cells(threadID)){
+		click_cells(threadID);
+		if(lose_cond){
 			cout << "Unlucky first click :-(\n";
-			pthread_exit((void*) threadArg); //Terminate thread
 		}
+
+		print_game();
+		
 	}
+
+	while(1){}
+	
 	
 	// Barrier 1
 	pthread_barrier_wait(&barrier1);//wait for initial click
 	
-	while(1){
+	while( !win_cond && !lose_cond ){//Add different conditions
 
 		//Start at indexes specified for block associated with the thread and iterate through each cell in the matrix
 		for(int i = my_data->i_indx; i < my_data->i_indx+(n/p); i++){
@@ -406,44 +433,50 @@ void *threadBlock(void* threadArg){
 					AMN(i, j, threadID);
 
 					// Barrier 2 
-					pthread_barrier_wait(&barrier2);//Wait for all threads to sync before examining click_vec and flag_vec
+					pthread_barrier_wait(&barrier1);//Wait for all threads to sync before examining click_vec and flag_vec
 
 
 					//Only call more advanced algorithms if DSSP fails
-					if(click_vec.empty() && flag_vec.empty()){//If no new cells have been added to action vectors
+					// if(click_vec.empty() && flag_vec.empty()){//If no new cells have been added to action vectors
 
-						// CSCSP
-						// End game tactics
+					// 	// CSCSP
+					// 	// End game tactics
 
-					}
+					// }
 					
 				}
 			}
 		}
 		
 		// Barrier 3	
-		pthread_barrier_wait(&barrier3);//Wait for the entire board to be evalutated
+		pthread_barrier_wait(&barrier1);//Wait for the entire board to be evalutated
 		
 
 		// click board
-		if(!click_cells(threadID)){//If mine was clicked
-			pthread_exit((void*) threadArg); //Terminate thread
-		}
+		click_cells(threadID);
 
 		// Barrier 4
-		pthread_barrier_wait(&barrier4);//Wait for all cells to be clicked
+		pthread_barrier_wait(&barrier1);//Wait for all cells to be clicked
 
 		//flag cells
 		flag_cells(threadID);
 
 		//Check win condition
 		if(flag_count == mine_count){
-			win_cond = 1;
-			pthread_exit((void*) threadArg); //Terminate thread
+			win_cond = true;
 		}
 		
 		// Barrier 5
-		pthread_barrier_wait(&barrier5);//Wait for all flags to be placed
+		pthread_barrier_wait(&barrier1);//Wait for all flags to be placed
+		
+
+		if(threadID == 0){
+			cout << "Current game state:\n";
+			print_game();
+		}
+
+		pthread_barrier_wait(&barrier1);//Wait for all flags to be placed
+
 	}
 
 	pthread_exit((void*) threadArg); //Terminate thread
@@ -455,9 +488,9 @@ int main(int argc, char *argv[]){
 	struct timespec start, stop; 
 	double time;
 	
-	p = atoi(argv[1]);//p^2 = number of threads
+	p = atoi(argv[1]);//p = number of threads
 		
-	int sub_grid_dim = n/p;//Subgrids are of size n/p * n/p
+	int sub_grid_dim = n/(p/2);//Subgrids are of size n/p * n/p
 	//This value helps determine the cells that a thread is in charge of evaluating.
 	//Each cell will iterate from its index to its index + this value in the x and y directions to iterate through all its cells
 	
@@ -466,16 +499,19 @@ int main(int argc, char *argv[]){
 
 	struct thread_data thread_data_array[p];//Each thread has index in the array of subgrids created from the main grid
 	pthread_t threads[p];//Opaque, unique IDs
-	pthread_attr_t attr;//Create pthread attribute obj
+	
+	//pthread_attr_init(&attr1);
 
 	//Create barriers
-	pthread_barrier_init(&barrier1, &attr, p);
-	pthread_barrier_init(&barrier2, &attr, p);
-	pthread_barrier_init(&barrier3, &attr, p);
-	pthread_barrier_init(&barrier4, &attr, p);
-	pthread_barrier_init(&barrier5, &attr, p);
+	pthread_barrier_init(&barrier1, &attr1, p);
+	// pthread_barrier_init(&barrier2, &attr, p);
+	// pthread_barrier_init(&barrier3, &attr, p);
+	// pthread_barrier_init(&barrier4, &attr, p);
+	// pthread_barrier_init(&barrier5, &attr, p);
+	// pthread_barrier_init(&barrier6, &attr, p);
 
 	//Init attribute and set the detached status
+	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);	
 
@@ -484,6 +520,8 @@ int main(int argc, char *argv[]){
 	string line;
 	int i = 0;
 	int j = 0;
+
+	cout << "Reading in solution matrix\n";
 	
 	while(getline(fi, line)){
 
@@ -526,6 +564,8 @@ int main(int argc, char *argv[]){
 			thread_data_array[a].j_indx = j;
 			thread_data_array[a].id = a;
 
+			//cout << "ID for thread is " << a << endl;
+
 			//Add a vector to hold the indexes; add a new vector for each subgrid/thread
 			std::vector<std::pair<int,int>> vop;
 			flag_vec.push_back(vop);
@@ -549,10 +589,10 @@ int main(int argc, char *argv[]){
 	if( clock_gettime( CLOCK_REALTIME, &stop) == -1 ) { perror("clock gettime");}		
 	time = (stop.tv_sec - start.tv_sec)+ (double)(stop.tv_nsec - start.tv_nsec)/1e9;
 
-	if(win_cond){//Check to see if AI solved the board
-		cout << "Board solved!\n";
-	}else{
+	if(lose_cond){//Check to see if AI solved the board
 		cout << "Game over!\n";
+	}else{
+		cout << "Board solved!\n";
 	}
 	print_game();//Print final game state
 
