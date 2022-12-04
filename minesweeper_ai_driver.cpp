@@ -5,11 +5,18 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <fstream>
+#include <sstream>
+#include <ctime>
+#include <cstdlib>
+
+using namespace std;
 
 #define n 16//Number of cells on intermediate board
 
 ///Global vars/// - shared memory
-char mainGrid[n][n]; //Full game grid
+int solutionGrid[n][n]; //Full game grid
+int mainGrid[n][n]; //Full game grid
 int mine_count = 40;//Number of mines in intermediate game
 int flag_count = 0;//Number of flags in intermediate board
 long unsigned int p; //num of threads
@@ -44,9 +51,9 @@ void AFN(int row, int col, int threadID){
 
 			for(int i = row; i < row+2; i++){
 				for(int j = col; j < col+2; j++){
-					if(mainGrid[row][col] == 'F'){
+					if(mainGrid[row][col] == -2){
 						flagged_neighbors++;						
-					}else if(mainGrid[row][col] == 'U'){
+					}else if(mainGrid[row][col] == -1){
 						cell_vec.push_back(std::pair(row,col));
 					}
 				}
@@ -56,9 +63,9 @@ void AFN(int row, int col, int threadID){
 
 			for(int i = row ; i < row+2; i++){
 				for(int j = col-1; j < n ; j++){
-					if(mainGrid[row][col] == 'F'){
+					if(mainGrid[row][col] == -2){
 						flagged_neighbors++;						
-					}else if(mainGrid[row][col] == 'U'){
+					}else if(mainGrid[row][col] == -1){
 						cell_vec.push_back(std::pair(row,col));
 					}
 				}
@@ -68,9 +75,9 @@ void AFN(int row, int col, int threadID){
 
 			for(int i = row-1 ; i < n; i++){
 				for(int j = col; j < col+2; j++){
-					if(mainGrid[row][col] == 'F'){
+					if(mainGrid[row][col] == -2){
 						flagged_neighbors++;						
-					}else if(mainGrid[row][col] == 'U'){
+					}else if(mainGrid[row][col] == -1){
 						cell_vec.push_back(std::pair(row,col));
 					}
 				}
@@ -80,9 +87,9 @@ void AFN(int row, int col, int threadID){
 
 			for(int i = row-1 ; i < n; i++){
 				for(int j = col-1; j < n ; j++){
-					if(mainGrid[row][col] == 'F'){
+					if(mainGrid[row][col] == -2){
 						flagged_neighbors++;						
-					}else if(mainGrid[row][col] == 'U'){
+					}else if(mainGrid[row][col] == -1){
 						cell_vec.push_back(std::pair(row,col));
 					}
 				}
@@ -92,9 +99,9 @@ void AFN(int row, int col, int threadID){
 
 			for(int i = row; i < row+2; i++){
 				for(int j = col-1; j < col+2; j++){
-					if(mainGrid[row][col] == 'F'){
+					if(mainGrid[row][col] == -2){
 						flagged_neighbors++;						
-					}else if(mainGrid[row][col] == 'U'){
+					}else if(mainGrid[row][col] == -1){
 						cell_vec.push_back(std::pair(row,col));
 					}
 				}
@@ -104,9 +111,9 @@ void AFN(int row, int col, int threadID){
 
 			for(int i = row-1 ; i < n; i++){
 				for(int j = col-1; j < col+2; j++){
-					if(mainGrid[row][col] == 'F'){
+					if(mainGrid[row][col] == -2){
 						flagged_neighbors++;						
-					}else if(mainGrid[row][col] == 'U'){
+					}else if(mainGrid[row][col] == -1){
 						cell_vec.push_back(std::pair(row,col));
 					}
 				}
@@ -116,9 +123,9 @@ void AFN(int row, int col, int threadID){
 
 			for(int i = row-1 ; i < row+2; i++){
 				for(int j = col; j < col+2; j++){
-					if(mainGrid[row][col] == 'F'){
+					if(mainGrid[row][col] == -2){
 						flagged_neighbors++;						
-					}else if(mainGrid[row][col] == 'U'){
+					}else if(mainGrid[row][col] == -1){
 						cell_vec.push_back(std::pair(row,col));
 					}
 				}
@@ -128,9 +135,9 @@ void AFN(int row, int col, int threadID){
 
 			for(int i = row-1 ; i < row+2; i++){
 				for(int j = col-1; j < n ; j++){
-					if(mainGrid[row][col] == 'F'){
+					if(mainGrid[row][col] == -2){
 						flagged_neighbors++;						
-					}else if(mainGrid[row][col] == 'U'){
+					}else if(mainGrid[row][col] == -1){
 						cell_vec.push_back(std::pair(row,col));
 					}
 				}
@@ -142,9 +149,9 @@ void AFN(int row, int col, int threadID){
 
 		for(int i = row-1 ; i < row+2; i++){
 				for(int j = col-1; j < col+2 ; j++){
-					if(mainGrid[row][col] == 'F'){
+					if(mainGrid[row][col] == -2){
 						flagged_neighbors++;						
-					}else if(mainGrid[row][col] == 'U'){
+					}else if(mainGrid[row][col] == -1){
 						cell_vec.push_back(std::pair(row,col));
 					}
 				}
@@ -153,11 +160,11 @@ void AFN(int row, int col, int threadID){
 	}
 
 	//compare flagged _neighbors and number on cell
-	if( (char)flagged_neighbors /*Cast to char*/ == mainGrid[row][col] ){
+	if( flagged_neighbors == mainGrid[row][col] ){
 		//Add all surrounding cells to click vec
 		for(auto& x : cell_vec){
 			click_vec[threadID].push_back(x);//Add pair of indexes to click_vec for its subgrid/thread
-			mainGrid[x.first][x.last] = 'S';//Change the cell's to be clicked to have an 'S' on them to indicate that they are safe to click (useful for AMN)
+			mainGrid[x.first][x.last] = -3;//Change the cell's to be clicked to have an 'S' on them to indicate that they are safe to click (useful for AMN)
 		}
 
 	}
@@ -167,6 +174,37 @@ void AFN(int row, int col, int threadID){
 void AMN(int row, int col){
 
 
+
+}
+
+bool click_cells(int threadID){
+
+	for(auto& x: click_vec[threadID]){
+		int row = x.first;
+		int col = x.second;
+
+		if(solutionGrid[row][col] == 9){//mine
+			cout << "Game over!\n";
+			printGame();
+			return false;
+
+		}else if(solutionGrid[row][col] == 0){//Empty cell
+
+			for(int i = --row; i<row + 2; ++i){
+				for(int j  = -- col; j < col + 2; ++j){
+					if((j >= 0) && (i >= 0)){
+						mainGrid[row][col] = solutionGrid[row][col];
+					}
+				}
+			}
+
+		}else{//Reveal cell
+			mainGrid[row][col] = solutionGrid[row][col];
+		}
+
+	}
+
+	return true;
 
 }
 
@@ -187,12 +225,15 @@ void *threadBlock(void* threadArg){
 	my_data = (struct thread_data *) threadArg;//Contains the i and j indexes to start at
 	
 	//thread 0 pictures
-	if (my_data.i_index == 0 && my_data.j_index ==0){
+	if (my_data.i_index == 0 && my_data.j_index == 0){
+		//Random move
+		int a = rand()%16;
+		int b = rand()%16;
+		click_vec.push_back(pair(row, col));
+
 		// initial click
-		// take photo
-		// load cells into shared memory
+		click_cells(a,b);
 	}
-	
 	
 	// Barrier 1
 	pthread_barrier_wait(&barrier1);
@@ -268,15 +309,47 @@ int main(int argc, char *argv[]){
 
 	//Init attribute and set the detached status
 	pthread_attr_init(&attr);
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);	
+
+	//Read in file
+	ifstream fi("solution_matrix.txt");
+	string line;
+	int i = 0;
+	int j = 0;
 	
-	
+	while(getline(fi, line)){
+
+		stringstream ss(line);
+
+		while (ss.good()) {
+        string substr;
+        getline(ss, substr, ',');
+        solutionGrid[i][j];
+    }
+		i++;
+		j = 0;
+	}
+
+	for(int k = 0; k < n; k++){
+		for(int l = 0; l < n; l++){
+			cout << solutionGrid[k][l] << ",";
+		}
+		cout << endl;
+	}
+
+	//Debug
+	return 0;
+
+	//Initialize gameplay matrix
+	int* begin = &mainGrid[0][0];
+	size_t size = sizeof(mainGrid) / sizeof(mainGrid[0][0]);
+	fill(begin, begin + size, -1);	
 
 	int rc;
 	int a =  0;//a indexes the thread_data_array which will store thread indexes in row major
-			
+
 	if( clock_gettime(CLOCK_REALTIME, &start) == -1) { perror("clock gettime");}
-	
+
 	//Have indexes increment by the size of the sub grids
 	for (i=0; i<n; i+= sub_grid_dim){//Row major traversal
 		for (j=0; j<n; j+= sub_grid_dim){
