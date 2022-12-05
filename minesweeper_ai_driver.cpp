@@ -492,17 +492,24 @@ void *threadBlock(void* threadArg){
 
 		//Only call more advanced algorithms if DSSP fails
 		if(threadID==0){
+			int click_vec_flag = 0;
+			int flag_vec_flag = 0;
 			for(auto& x: click_vec){
 				if(!x.empty()){
+					click_vec_flag=1; // this means not empty
 					break;
 				}
 			}
 			for(auto& x: flag_vec){
 				if(!x.empty()){
+					flag_vec_flag =1; // this means not empty
 					break;
 				}
 			}
-			while(1){};
+			if ((click_vec_flag==0)&&(flag_vec_flag==0)){
+				while(1){};
+				// call other algorithms
+			}
 			//call other algorithms
 		}
 		// if(click_vec[threadID].empty() && flag_vec[threadID].empty()){//If no new cells have been added to action vectors
