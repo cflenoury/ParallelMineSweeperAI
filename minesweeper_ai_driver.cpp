@@ -491,14 +491,28 @@ void *threadBlock(void* threadArg){
 		pthread_barrier_wait(&barrier1);//Wait for all threads to sync before examining click_vec and flag_vec
 
 		//Only call more advanced algorithms if DSSP fails
-		if(click_vec[threadID].empty() && flag_vec[threadID].empty()){//If no new cells have been added to action vectors
-
-			// CSCSP
-			// End game tactics
-			cout << "Thread " << threadID<< " has nothing to click\n";
-			//while(1){};
-
+		if(threadID==0){
+			for(auto& x: click_vec){
+				if(!x.empty()){
+					break;
+				}
+			}
+			for(auto& x: flag_vec){
+				if(!x.empty()){
+					break;
+				}
+			}
+			while(1){};
+			//call other algorithms
 		}
+		// if(click_vec[threadID].empty() && flag_vec[threadID].empty()){//If no new cells have been added to action vectors
+
+		// 	// CSCSP
+		// 	// End game tactics
+		// 	cout << "Thread " << threadID<< " has nothing to click\n";
+			
+
+		//}
 		
 		// Barrier 3	
 		pthread_barrier_wait(&barrier1);//Wait for the entire board to be evalutated
