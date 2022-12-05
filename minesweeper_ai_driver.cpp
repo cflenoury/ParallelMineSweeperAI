@@ -12,7 +12,7 @@
 #include <utility>
 #include <ctime>
 #include <iomanip>
-
+#include <cmath>
 using namespace std;
 
 #define n 16//Number of cells on intermediate board
@@ -25,6 +25,7 @@ int flag_count = 0;//Number of flags in intermediate board
 long unsigned int p; //num of threads
 bool win_cond = false;
 bool lose_cond = false;
+int subgrid_dim;
 
 //Create barriers
 pthread_barrier_t barrier1; 
@@ -55,121 +56,6 @@ void AFN(int row, int col, int threadID){
 
 	std::vector<std::pair<int,int>> cell_vec;
 	
-
-	// if( row*col == 0 || row == 15 || col == 15){//Count the number of flagged neighbors
-
-	// 	if(row == 0 && col == 0){//Top left
-
-	// 		for(int i = row; i < row+2; i++){
-	// 			for(int j = col; j < col+2; j++){
-	// 				if(mainGrid[i][j] == -2){
-	// 					flagged_neighbors++;						
-	// 				}else if(mainGrid[i][j] == -1){
-	// 					cell_vec.push_back(std::pair<int,int>(i,j));
-	// 				}
-	// 			}
-	// 		}
-
-	// 	}else if(row == 0 && col == 15){//Top right
-
-	// 		for(int i = row ; i < row+2; i++){
-	// 			for(int j = col-1; j < n ; j++){
-	// 				if(mainGrid[i][j] == -2){
-	// 					flagged_neighbors++;						
-	// 				}else if(mainGrid[i][j] == -1){
-	// 					cell_vec.push_back(std::pair<int,int>(i,j));
-	// 				}
-	// 			}
-	// 		}
-
-	// 	}else if(row == 15 && col == 0){//Bottom left
-
-	// 		for(int i = row-1 ; i < n; i++){
-	// 			for(int j = col; j < col+2; j++){
-	// 				if(mainGrid[i][j] == -2){
-	// 					flagged_neighbors++;						
-	// 				}else if(mainGrid[i][j] == -1){
-	// 					cell_vec.push_back(std::pair<int,int>(i,j));
-	// 				}
-	// 			}
-	// 		}
-	
-	// 	}else if(row == 15 && col == 15){//Bottom right
-
-	// 		for(int i = row-1 ; i < n; i++){
-	// 			for(int j = col-1; j < n ; j++){
-	// 				if(mainGrid[i][j] == -2){
-	// 					flagged_neighbors++;						
-	// 				}else if(mainGrid[i][j] == -1){
-	// 					cell_vec.push_back(std::pair<int,int>(row,col));
-	// 				}
-	// 			}
-	// 		}
-
-	// 	}else if(row == 0){// col != 0
-
-	// 		for(int i = row; i < row+2; i++){
-	// 			for(int j = col-1; j < col+2; j++){
-	// 				if(mainGrid[i][j] == -2){
-	// 					flagged_neighbors++;						
-	// 				}else if(mainGrid[i][j] == -1){
-	// 					cell_vec.push_back(std::pair<int,int>(row,col));
-	// 				}
-	// 			}
-	// 		}
-
-	// 	}else if(row == 15){//Bottom edge
-
-	// 		for(int i = row-1 ; i < n; i++){
-	// 			for(int j = col-1; j < col+2; j++){
-	// 				if(mainGrid[i][j] == -2){
-	// 					flagged_neighbors++;						
-	// 				}else if(mainGrid[i][j] == -1){
-	// 					cell_vec.push_back(std::pair<int,int>(row,col));
-	// 				}
-	// 			}
-	// 		}
-
-	// 	}else if(col == 0){//Left edge
-
-	// 		for(int i = row-1 ; i < row+2; i++){
-	// 			for(int j = col; j < col+2; j++){
-	// 				if(mainGrid[i][j] == -2){
-	// 					flagged_neighbors++;						
-	// 				}else if(mainGrid[i][j] == -1){
-	// 					cell_vec.push_back(std::pair<int,int>(i,j));
-	// 				}
-	// 			}
-	// 		}
-
-	// 	}else if(col == 15){//Right edge
-
-	// 		for(int i = row-1 ; i < row+2; i++){
-	// 			for(int j = col-1; j < n ; j++){
-	// 				if(mainGrid[i][j] == -2){
-	// 					flagged_neighbors++;						
-	// 				}else if(mainGrid[i][j] == -1){
-	// 					cell_vec.push_back(std::pair<int,int>(i,j));
-	// 				}
-	// 			}
-	// 		}
-
-	// 	}
-
-	// }else{//Middle cell
-
-	// 	for(int i = row-1 ; i < row+2; i++){
-	// 			for(int j = col-1; j < col+2 ; j++){
-	// 				if(mainGrid[i][j] == -2){
-	// 					flagged_neighbors++;						
-	// 				}else if(mainGrid[i][j] == -1){
-	// 					cell_vec.push_back(std::pair<int,int>(i,j));
-	// 				}
-	// 			}
-	// 		}
-
-	// }
-
 	for(int i = row-1; i<row + 2; i++){
 		for(int j  = col-1; j < col + 2; j++){
 			if((i*j >= 0) && (i < n) && (j < n)){
@@ -181,9 +67,6 @@ void AFN(int row, int col, int threadID){
 			}
 		}
 	}
-
-	//cout << "# of flagged neighbors"
-
 	//compare flagged _neighbors and number on cell
 	if( flagged_neighbors == mainGrid[row][col] ){
 		//Add all surrounding cells to click vec
@@ -448,11 +331,11 @@ void *threadBlock(void* threadArg){
 	if (threadID == 0){
 		cout << "Making first move\n";
 		//Random move
-		// srand(time(NULL));
-		int a = rand()%16;
-		int b = rand()%16;
-		// int a = 9;
-		// int b = 9;
+		//srand(time(NULL));
+		//int a = rand()%16;
+		//int b = rand()%16;
+		int a = 9;
+		int b = 9;
 
 		pair<int,int> p(a, b);
 		click_vec[threadID].push_back(p);
@@ -475,8 +358,8 @@ void *threadBlock(void* threadArg){
 	while( !win_cond && !lose_cond ){
 
 		//Start at indexes specified for block associated with the thread and iterate through each cell in the matrix
-		for(int i = my_data->i_indx; i < my_data->i_indx+(2*n/p); i++){
-			for(int j = my_data->j_indx; j < my_data->j_indx + (2*n/p); j++){
+		for(int i = my_data->i_indx; i < my_data->i_indx+(subgrid_dim); i++){
+			for(int j = my_data->j_indx; j < my_data->j_indx + (subgrid_dim); j++){
 
 				//if cell is unrevealed
 				if(mainGrid[i][j] > 0 ){
@@ -507,19 +390,11 @@ void *threadBlock(void* threadArg){
 				}
 			}
 			if ((click_vec_flag==0)&&(flag_vec_flag==0)){
-				while(1){};
+				//while(1){};
+				lose_cond = true;
 				// call other algorithms
 			}
-			//call other algorithms
 		}
-		// if(click_vec[threadID].empty() && flag_vec[threadID].empty()){//If no new cells have been added to action vectors
-
-		// 	// CSCSP
-		// 	// End game tactics
-		// 	cout << "Thread " << threadID<< " has nothing to click\n";
-			
-
-		//}
 		
 		// Barrier 3	
 		pthread_barrier_wait(&barrier1);//Wait for the entire board to be evalutated
@@ -570,7 +445,7 @@ int main(int argc, char *argv[]){
 	
 	p = atoi(argv[1]);//p = number of threads
 		
-	int sub_grid_dim = 2*n/p;//Subgrids are of size n/p * n/p
+	subgrid_dim = n/sqrt(p);//Subgrids are of size n/p * n/p
 	//This value helps determine the cells that a thread is in charge of evaluating.
 	//Each cell will iterate from its index to its index + this value in the x and y directions to iterate through all its cells
 	
@@ -611,6 +486,8 @@ int main(int argc, char *argv[]){
 		i++;
 		j = 0;
 	}
+
+	//cout << "Did we get here.\n";
 	
 	//Debug
 	//print_game(); - replace mainGrid with solutionGrid
@@ -631,8 +508,8 @@ int main(int argc, char *argv[]){
 	if( clock_gettime(CLOCK_REALTIME, &start) == -1) { perror("clock gettime");}
 
 	//Have indexes increment by the size of the sub grids
-	for (i=0; i<n; i+= sub_grid_dim){//Row major traversal
-		for (j=0; j<n; j+= sub_grid_dim){
+	for (i=0; i<n; i+= subgrid_dim){//Row major traversal
+		for (j=0; j<n; j+= subgrid_dim){
 
 			//The indexes that each subgrid starts at (top left element in subgrid)
 			thread_data_array[a].i_indx = i;
